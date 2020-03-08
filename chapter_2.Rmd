@@ -1,0 +1,198 @@
+---
+title: "Chapter 2"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+### EXAMPLE 2 - 2(1) Simple Linear Regression of Fertilizer Data
+
+### Data input
+```{r}
+yield <- c(12,13,13,14,15,15,14,16,17,18)
+fert <- c(2,2,3,3,4,4,5,5,6,6)
+All <- data.frame(yield,fert)
+```
+
+#### Data visualization
+```{r}
+# Scatterplot with star points
+plot(All$fert,All$yield,xlab = "fert",ylab="yield",pch=8)
+```
+
+#### Descriptive statistics
+```{r}
+library(psych)
+describe(All)
+
+# correlation
+round(cor(All),4)
+```
+
+#### OLS Model
+```{r}
+model <- lm(yield ~fert, data= All)
+anova(model)
+summary(model)
+``` 
+
+#### Outputs
+```{r}
+#confidence interval
+confint(model)
+
+# outputs
+dependent_variable <- All$yield
+predicted <- fitted(model)
+# std error mean predict = sqrt(MSE(1/n + (x-x_bar)^2/SS_x))
+std_error <- predict.lm(model,se.fit=T,interval="confidence")$se.fit
+CL_mean <- as.data.frame(predict(model, interval = "confidence"))
+CL_mean_lwr <- CL_mean$lwr
+CL_mean_upr <- CL_mean$upr
+CL_predict <- as.data.frame(predict(model, interval = "prediction"))
+CL_predict_lwr <- CL_predict$lwr
+CL_predict_upr <- CL_predict$upr
+res <- round(resid(model),4)
+reg <- cbind(yield, predicted, std_error, CL_mean_lwr, CL_mean_upr, CL_predict_lwr,CL_predict_upr, res)
+print(reg)
+sum_of_res <- round(sum(res),4)
+sum_of_sq_res <- round(sum(res^2),4)
+PRESS <- function(linear.model) {
+    pr <- residuals(linear.model)/(1 - lm.influence(linear.model)$hat)
+    sum(pr^2)
+}
+press <- PRESS(model)
+cat(paste0("Sum of residual: ", sum_of_res),
+    paste0("Sum of SquareResidual：",sum_of_sq_res), 
+    paste0("PRESS: ",press), sep = "\n")
+```
+
+
+### EXAMPLE 2 - 2(2) New Graphics Options
+
+Output graphs as ODS GRAPHICS in SAS:
+### Data input
+```{r}
+rm(list = ls())
+yield <- c(12,13,13,14,15,15,14,16,17,18)
+fert <- c(2,2,3,3,4,4,5,5,6,6)
+All <- data.frame(yield,fert)
+```
+
+#### Calculations
+```{r}
+# calculations
+model <- lm(yield ~fert, data= All)
+
+legend_values <- c(paste0("Observations: ", nrow(All)),
+    paste0("Parameters：",length(model$coefficients)), 
+    paste0("Error DF: ",model$df.residual),
+    paste0("MSE: ",round(sum(model$residuals^2)/(model$df.residual),4)),
+    paste0("R-Square: ", round(summary(model)$r.squared,4)),
+    paste0("Adj R-Square: ",round(summary(model)$adj.r.squared,4)))
+print(legend_values)
+```
+
+#### Fit Plot 
+```{r}
+conf <- predict(model, interval = "confidence")
+pred <-  predict(model, interval="prediction")
+res <- resid(model)
+# plot settings
+plot(All$yield~All$fert, main = "Fit Plot for Yield", ylim = c(min(pred[,"lwr"]),max(pred[,"upr"])))
+# plot confidence band
+polygon(c(All$fert,rev(All$fert)),c(conf[,"lwr"],rev(conf[,"upr"])),border=NA,col=blues9[3])
+lines(All$fert,conf[,"fit"],lwd=2,col=blues9[8])
+# plot predicted band
+lines(All$fert,pred[,"fit"],lwd=2)
+lines(All$fert,pred[,"lwr"],lty=3)
+lines(All$fert,pred[,"upr"],lty=3)
+points(All$fert,yield,pch=16,col="steelblue")
+legend("topleft",legend = legend_values,cex=0.5)
+```
+
+#### Residual plot
+```{r}
+plot(All$fert, res, ylab = "Residuals", xlab = "Fert",main = "Residual Plot")
+abline(h =0)
+```
+
+#### Plot matrix
+```{r}
+library(MASS)
+par(mfrow=c(2,4))
+# residual plot 
+plot(pred[,"fit"], res, ylab = "Residuals", xlab = "Predicted Value")
+abline(h =0)
+
+# studendized residual plot
+plot(pred[,"fit"], studres(model), ylab = "RStudent", xlab = "Predicted Value", ylim = c(min(studres(model),-2), max(studres(model),2)))
+abline(h = c(-2,2))
+
+# leverage plot
+plot(hatvalues(model), studres(model), pch=1, cex=1, xlab = "Leverage",ylab = "RStudent")
+abline(h = c(-2,2))
+
+# qq plot
+stdres <- rstandard(model)
+qqnorm(stdres, ylab="Std Residual", xlab="Quantile") 
+qqline(stdres)
+
+# fitted value v.s. true value
+plot(pred[,"fit"], All$yield, ylab = "Yield", xlab = "Predicted Value",asp = 1)
+abline(0,1)
+
+# Cook's D
+plot(cooks.distance(model), type="h", pch=1, cex=1, xlab = "Observation",ylab = "Cook's distance")
+
+# histogram of residual proportion 
+xLimits <- range(res)
+breakPoints <- seq(xLimits[1], xLimits[2], length.out = 5)
+h <- hist(res,breaks=breakPoints, ylab="Proportion",xlab="Residual",prob=T)
+xfit <- seq(min(res),max(res),length=40)
+yfit <- dnorm(xfit,mean=mean(res),sd=sd(res))
+lines(xfit,yfit)
+
+```
+
+### EXAMPLE 2 - 2(3) Model Prediction
+
+### Data input
+```{r}
+rm(list=ls())
+yield <- c(12,13,13,14,15,15,14,16,17,18)
+fert <- c(2,2,3,3,4,4,5,5,6,6)
+All <- data.frame(yield,fert)
+```
+
+#### OLS Model
+```{r}
+model <- lm(yield ~fert, data= All)
+anova(model)
+summary(model)
+``` 
+
+#### Outputs
+```{r}
+# new data
+new_fert <- data.frame(fert = c(2,2,3,3,4,4,5,5,6,6,2.5,3.5,4.5,5.5,6.5))
+yhat <- predict(model,newdata = new_fert)
+
+CL_mean <- as.data.frame(predict(model, newdata = new_fert,interval = "confidence"))
+LCLM <- CL_mean$lwr
+UCLM <- CL_mean$upr
+CL_predict <- as.data.frame(predict(model, newdata = new_fert, interval = "prediction"))
+LCL <- CL_predict$lwr
+UCL <- CL_predict$upr
+
+# present values
+yield <- c(yield,rep(NA,5))
+pred <- cbind(new_fert, yield, yhat, LCLM, UCLM, LCL, UCL)
+print(pred)
+```
+
+
+

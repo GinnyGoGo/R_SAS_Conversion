@@ -1,0 +1,69 @@
+---
+title: "Chapter_3"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+### Example: Matrix Operations
+
+#### Data input
+```{r}
+y <- c(2,2,4,5,6)
+x <- c(1,2,3,4,5)
+all <- data.frame(y,x)
+```
+
+#### OLS method
+```{r}
+model <- lm(y ~x, data= all)
+anova(model)
+summary(model)
+```
+
+#### Matrix method
+
+```{r}
+# matrix preparition
+X <- matrix(c(rep(1,5),1,2,3,4,5),5,2)
+Y <- matrix(c(2,2,4,5,6),5,1)
+YY <- t(Y) %*% Y
+XY <- t(X) %*% Y
+XX <- t(X) %*% X
+IXX <- solve(XX)
+beta <- IXX %*% XY
+
+# Print matrixs
+fn <- function(x) setNames(data.frame(x, check.names=F,row.names=NULL),c(paste(substitute(x)), colnames(x)))
+
+fn(YY)
+cbind(fn(Y),fn(X))
+cbind(fn(XX), fn(IXX), fn(XY),fn(beta))
+
+```
+
+#### OLS solution
+```{r}
+# Calculations
+H <- round(X %*% IXX %*% t(X),3)
+J <- matrix(1,5,5)
+cbind(fn(H),fn(J))
+
+n <- nrow(Y)
+SST <- t(Y) %*% Y -  (1/n) * t(Y) %*% J %*% Y
+SSR <- t(Y) %*% t(H) %*% Y -(1/n) * (t(Y) %*% J %*% Y)
+SSE <- t(Y) %*% Y -  t(Y) %*% t(H) %*% Y
+MSR <- SSR / 1
+MSE <- SSE / (n-2)
+
+F <- MSR/MSE
+P_value <- pf(q=F, df1 = 1, df2 = n-2, lower.tail = FALSE)
+
+# print the results
+cbind(fn(n),fn(SST),fn(SSR), fn(SSE),fn(MSR),fn(MSE),fn(F),fn(P_value))
+
+```
+

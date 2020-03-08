@@ -1,0 +1,439 @@
+---
+title: "Chapter 6"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+### Example 6-1 Four Cases Data
+
+#### Data Input
+```{r}
+x <- c(10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5)
+y1 <- c(8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.82, 5.68)
+y2 <- c(9.14, 8.14, 8.74, 8.77, 9.26, 8.1, 6.13, 3.1, 9.13, 7.26, 4.74)
+y3 <- c(7.46, 6.77, 12.74, 7.11, 7.81, 8.84, 6.08, 5.39, 8.15, 6.42, 5.73)
+x4 <- c(8, 8, 8, 8, 8, 8, 8, 19, 8, 8, 8)
+y4 <- c(6.58, 5.76, 7.71, 8.84, 8.47, 7.04, 5.25, 12.5, 5.56, 7.91, 6.89)
+x1 = x
+x2 = x
+x3 = x
+
+All <- data.frame(y1,y2,y3,y4,x1,x2,x3,x4)
+# sort value
+i=sort(All$x1,index.return=TRUE)$ix
+All <- All[i,]
+```
+
+### Case 1
+
+#### Regression model
+```{r}
+model1 <- lm(y1 ~ x1, data= All)
+
+anova(model1)
+summary(model1)
+```
+
+#### Calculations
+```{r}
+# calculations
+ods.lengend <- function(model, All){
+    legend_values <- c(paste0("Observations: ", nrow(All)),
+    paste0("Parameters：",length(model$coefficients)), 
+    paste0("Error DF: ",model$df.residual),
+    paste0("MSE: ",round(sum(model$residuals^2)/(model$df.residual),4)),
+    paste0("R-Square: ", round(summary(model)$r.squared,4)),
+    paste0("Adj R-Square: ",round(summary(model)$adj.r.squared,4)))
+  print(legend_values)
+}
+
+ods.lengend(model1,All)
+
+```
+
+#### Fit Plot 
+```{r}
+conf <- predict(model1, interval = "confidence")
+pred <-  predict(model1, interval="prediction")
+
+ods.plot.fit <- function(x,y) {
+  # plot settings
+  plot(All[,x], All[,y],main = "Fit Plot",ylim = c(min(pred[,"lwr"]),max(pred[,"upr"])),xlab = x, ylab = y)
+  # plot confidence band
+  polygon(c(All[,x],rev(All[,x])),c(conf[,"lwr"],rev(conf[,"upr"])),border=NA,col=blues9[3])
+  lines(All[,x],conf[,"fit"],lwd=2,col=blues9[8])
+  # plot predicted band
+  lines(All[,x],pred[,"fit"],lwd=2)
+  lines(All[,x],pred[,"lwr"],lty=3)
+  lines(All[,x],pred[,"upr"],lty=3)
+  points(All[,x],All[,y],pch=16,col="steelblue")
+}
+
+ods.plot.fit("x1","y1")
+```
+
+
+#### Residual plot
+```{r}
+res <- resid(model1)
+ods.plot.res <- function(x){
+  plot(All[,x], res, ylab = "Residuals", xlab = x, main = "Residual Plot")
+  abline(h =0)
+}
+
+ods.plot.res("x1")
+```
+
+#### Plot matrix
+```{r}
+library(MASS)
+ods.plot.diag <- function(model,y){
+  par(mfrow=c(2,4))
+  # residual plot 
+  plot(pred[,"fit"], res, ylab = "Residuals", xlab = "Predicted Value")
+  abline(h =0)
+
+  # studendized residual plot
+  plot(pred[,"fit"], studres(model), ylab = "RStudent", xlab = "Predicted Value", ylim = c(min(studres(model),-2), max(studres(model),2)))
+  abline(h = c(-2,2))
+
+  # leverage plot
+  plot(hatvalues(model), studres(model), pch=1, cex=1, xlab = "Leverage",ylab = "RStudent")
+  abline(h = c(-2,2))
+
+  # qq plot
+  stdres <- rstandard(model)
+  qqnorm(stdres, ylab="Std Residual", xlab="Quantile") 
+  qqline(stdres)
+
+  # fitted value v.s. true value
+  plot(pred[,"fit"], All[,y], ylab = y, xlab = "Predicted Value",asp = 1)
+  abline(0,1)
+
+  # Cook's D
+  plot(cooks.distance(model), type="h", pch=1, cex=1, xlab = "Observation",ylab = "Cook's distance")
+
+  # histogram of residual proportion 
+  xLimits <- range(res)
+  breakPoints <- seq(xLimits[1], xLimits[2], length.out = 5)
+  h <- hist(res,breaks=breakPoints, ylab="Proportion",xlab="Residual",prob=T)
+  xfit <- seq(min(res),max(res),length=40)
+  yfit <- dnorm(xfit,mean=mean(res),sd=sd(res))
+  lines(xfit,yfit)
+}
+
+
+ods.plot.diag(model1,"y1")
+
+```
+
+
+### Case 2
+
+#### Regression model
+```{r}
+model2 <- lm(y2 ~ x2, data= All)
+
+anova(model2)
+summary(model2)
+```
+
+#### Calculations
+```{r}
+# calculations
+ods.lengend(model2,All)
+
+```
+
+#### Fit Plot 
+```{r}
+conf <- predict(model2, interval = "confidence")
+pred <-  predict(model2, interval="prediction")
+
+ods.plot.fit("x2","y2")
+```
+
+
+#### Residual plot
+```{r}
+res <- resid(model1)
+
+ods.plot.res("x2")
+```
+
+#### Plot matrix
+```{r}
+ods.plot.diag(model2,"y2")
+
+```
+
+
+
+### Case 3
+
+#### Regression model
+```{r}
+model3 <- lm(y3 ~ x3, data= All)
+
+anova(model3)
+summary(model3)
+```
+
+#### Calculations
+```{r}
+# calculations
+ods.lengend(model3,All)
+
+```
+
+#### Fit Plot 
+```{r}
+conf <- predict(model3, interval = "confidence")
+pred <-  predict(model3, interval="prediction")
+
+ods.plot.fit("x3","y3")
+```
+
+
+#### Residual plot
+```{r}
+res <- resid(model3)
+
+ods.plot.res("x3")
+```
+
+#### Plot matrix
+```{r}
+ods.plot.diag(model3,"y3")
+
+```
+
+
+
+### Case 4
+
+#### Regression model
+```{r}
+model4 <- lm(y4 ~ x4, data= All)
+
+anova(model4)
+summary(model4)
+```
+
+#### Calculations
+```{r}
+# calculations
+ods.lengend(model4,All)
+
+```
+
+#### Fit Plot 
+```{r}
+conf <- predict(model4, interval = "confidence")
+pred <-  predict(model4, interval="prediction")
+
+ods.plot.fit("x4","y4")
+```
+
+
+#### Residual plot
+```{r}
+res <- resid(model4)
+ods.plot.res("x4")
+```
+
+#### Plot matrix
+
+```{r}
+par(mfrow=c(2,4))
+# residual plot 
+plot(pred[,"fit"], res, ylab = "Residuals", xlab = "Predicted Value")
+abline(h =0)
+
+# Set NA value as 0 in the result of RStudent calculation.
+
+# studendized residual plot
+library(MASS)
+studres <- studres(model4)
+studres[which(is.na(studres))] <- 0
+plot(pred[,"fit"], studres, ylab = "RStudent", xlab = "Predicted Value", ylim = c(min(studres,-2), max(studres,2)))
+abline(h = c(-2,2))
+
+# leverage plot
+plot(hatvalues(model4), studres, pch=1, cex=1, xlab = "Leverage",ylab = "RStudent")
+abline(h = c(-2,2))
+
+# qq plot
+stdres <- rstandard(model4)
+qqnorm(stdres, ylab="Std Residual", xlab="Quantile") 
+qqline(stdres)
+
+# fitted value v.s. true value
+plot(pred[,"fit"], All[,"y4"], ylab = "y4", xlab = "Predicted Value",asp = 1)
+abline(0,1)
+
+# Cook's D
+plot(cooks.distance(model4), type="h", pch=1, cex=1, xlab = "Observation",ylab = "Cook's distance")
+
+# histogram of residual proportion 
+xLimits <- range(res)
+breakPoints <- seq(xLimits[1], xLimits[2], length.out = 5)
+h <- hist(res,breaks=breakPoints, ylab="Proportion",xlab="Residual",prob=T)
+xfit <- seq(min(res),max(res),length=40)
+yfit <- dnorm(xfit,mean=mean(res),sd=sd(res))
+lines(xfit,yfit)
+```
+
+
+
+### Example 6-2 Residual Analysis
+
+#### Input data
+```{r}
+rm(list = ls())
+x1 <- c(2, 3, 16.6, 7, 5.3, 16.5, 25.89, 44.42, 39.63, 31.92, 97.33, 56.63, 96.67, 54.58, 113.88, 149.58, 134.32, 188.74, 110.24, 96.83, 102.33, 274.92, 811.08, 384.5, 95)
+
+x2 <- c(4, 1.58, 23.78, 2.37, 1.67, 8.25, 3, 159.75, 50.86, 40.08, 255.08, 373.42, 206.67, 207.08, 981, 233.83, 145.82, 937, 410, 677.33, 288.83, 695.25, 714.33, 1473.66, 368)
+
+x3 <- c(4, 40, 40, 168, 42.5, 168, 40, 168, 40, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168)
+
+x4 <- c(1.26, 1.25, 1, 1, 7.79, 1.12, 0, 0.6, 27.37, 5.52, 19, 6.03, 17.86, 7.77, 24.48, 31.07, 25.99, 45.44, 20.05, 20.31, 21.01, 46.63, 22.76, 7.36, 30.26)
+
+x5 <- c(1, 1, 1, 1, 3, 2, 3, 18, 10, 6, 6, 4, 14, 6, 6, 14, 12, 26, 12, 10, 14, 58, 17, 24, 9)
+
+x6 <- c(6, 5, 13, 7, 25, 19, 36, 48, 77, 47, 165, 36, 120, 66, 166, 185, 192, 237, 115, 302, 131, 363, 242, 540, 292)
+
+x7 <- c(6, 5, 13, 8, 25, 19, 36, 48, 77, 47, 130, 37, 120, 66, 179, 202, 192, 237, 115, 210, 131, 363, 242, 453, 196)
+
+y <- c(180.23, 182.61, 164.38, 284.55, 199.92, 267.38, 999.09, 1103.24, 944.21, 931.84, 2268.06, 1489.5, 1891.7, 1387.82, 3559.92, 3115.29, 2227.76, 4804.24, 2628.32, 1880.84, 3036.63, 5539.98, 3534.49, 8266.77, 1845.89)
+
+All <- data.frame(x1,x2,x3,x4,x5,x6,x7,y)
+```
+ 
+ 
+#### Regression model
+```{r}
+model <- lm(y ~ ., data = All)
+anova(model)
+summary(model)
+
+library(car)
+Anova(model, type="II") # Type II test
+```
+
+#### D-W test and White test
+```{r}
+# D-W test
+# library(car)
+durbinWatsonTest(model) 
+
+# White test
+white_test <- function(model,data){
+  u2 <- model$residuals^2
+  matr.x <- as.matrix(data[,1:7])
+  Ru2<- summary(lm(u2 ~ 1+ poly(matr.x,3)))$r.squared # poly: orthogonal polynomial
+  LM <- nrow(data)*Ru2
+  c(paste0("Chi-Square: ",LM), 
+    paste0("p-value: ",pchisq(LM, df = 26, lower = FALSE))
+    ) # the results are a little different from SAS (Chi-Square=23.97, p=0.5776)
+}
+
+white_test(model, All)
+```
+
+
+#### Plots of residual 
+```{r}
+# plot of residual & predict
+plot(fitted(model),resid(model), pch=8, xlab="Predicted Value of Y", ylab = "Residual")
+abline(h=0)
+
+# plot of studentized residual & predict
+plot(fitted(model),studres(model), pch=8, xlab="Predicted Value of Y", ylab = "Studentized Residual")
+abline(h=c(-2,0,2))
+
+# plot of residual & xi values (ODS Graphics)
+res.plot <- function(x){
+  plot(All[,x],resid(model), pch=1, xlab=x, ylab = "Residual")
+  abline(h=0)
+}
+
+par(mfrow=c(2,4))
+res.plot("x1")
+res.plot("x2")
+res.plot("x3")
+res.plot("x4")
+res.plot("x5")
+res.plot("x6")
+res.plot("x7")
+
+
+```
+
+
+#### calculations and table 
+```{r}
+All_result <- data.frame("y" = All$y,
+                      "predict" = fitted(model),
+                      "residual" = resid(model),
+                      "STDR" = stdres(model),
+                      "Student" = studres(model),
+                      "RStudent" = rstudent(model),
+                      "H" = hatvalues(model)
+                      )
+print(All_result)
+```
+
+#### Descriptive statistics of residual
+
+```{r}
+res <- resid(model)
+#summary
+library(pastecs)
+options(scipen = 200)
+values <- stat.desc(res,norm = TRUE)
+round(values,4)
+```
+
+```{r}
+#Test for location:
+t.test(res)
+```
+
+```{r}
+#Test for normality：
+library(fBasics)
+#Shapiro-Wilk's test for normality
+shapiroTest(res)
+#Kolmogorov-Smirnov normality test
+ks.test(res, "pnorm", mean(res), sd(res))
+#Cramer–von Mises normality test
+cvmTest(res)
+#Anderson–Darling normality test
+adTest(res)
+```
+
+```{r}
+#Quantiles
+quantile(res,c(1,0.99,0.95,0.90,0.75,0.50,0.25,0.10,0.05,0.01,0))
+```
+
+```{r}
+#Plots
+#Stem leaf
+stem(res,scale = 2) #"scale" controls the plot length.
+
+#boxplot
+boxplot(res,main="Boxplot for residual")
+
+#Normal probability plot
+qqnorm(res)
+
+```
+
+
+
+

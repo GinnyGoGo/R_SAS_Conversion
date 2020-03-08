@@ -1,0 +1,204 @@
+---
+title: "Chapter 1"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+### EXAMPLE 1 - 1 Descriptive Statistics 
+
+```{r}
+# input x:
+x <- c(25, 35, 55, 15, 40, 25, 55, 35, 45, 5, 20)
+
+#discriptive statistics:
+library(pastecs)
+options(scipen = 200)
+res <- stat.desc(x,norm = TRUE)
+round(res,4)
+```
+
+```{r}
+#Test for location:
+t.test(x)
+```
+
+```{r}
+#Test for normality：
+library(fBasics)
+#Shapiro-Wilk's test for normality
+shapiroTest(x)
+#Kolmogorov-Smirnov normality test
+ks.test(x, "pnorm", mean(x), sd(x)) 
+#Cramer–von Mises normality test
+cvmTest(x)
+#Anderson–Darling normality test
+adTest(x)
+```
+
+```{r}
+#Quantiles
+quantile(x,c(1,0.99,0.95,0.90,0.75,0.50,0.25,0.10,0.05,0.01,0))
+```
+```{r}
+#Plots
+#Stem leaf
+stem(x,scale = 2) # "scale" controls the plot length.
+
+#boxplot
+boxplot(x,main="Boxplot for x")
+
+#Normal probability plot
+qqnorm(x)
+
+#Histogram and density plot
+plot(density(x),main = "Description Statistics")
+hist(x, freq=F, add=T)
+```
+
+### EXAMPLE 1 - 2 T Test 
+
+#### TWO INDEPENDENT SAMPLES
+```{r}
+rm(list=ls())
+Water <- c("BOT",	"BOT",	"BOT",	"BOT",	"BOT",	"BOT",	"SUR",	"SUR",	"SUR",	"SUR",	"SUR",	"SUR")	
+Metal <- c(0.43,	0.266,	0.567,	0.531,	0.707,	0.716,	0.415,	0.238,	0.39,	0.41,	0.605,	0.609)
+All <- data.frame(Water, Metal)
+str(All)
+# Input two vectors
+BOT <- c(0.43,0.266,0.567,0.531,0.707,0.716)
+SUR <- c(0.415,0.238,0.39,0.41,0.605,0.609)
+
+#descreptive statistics by two groups
+library(doBy)
+summaryBy(Metal~Water, data = All, FUN = stat.desc)
+
+#Normality tests
+shapiro.test(BOT)
+shapiro.test(SUR) 
+
+#Equality of variances
+var.test(BOT,SUR)
+
+#Two independent sample t-test
+t.test(BOT,SUR,var.equal = TRUE)
+```
+
+The null hypothesis of normality and variances equality of both BOT and SUR are not rejected. P-value of two independent t-test is far mor than 0.05.
+
+#### One-way anova 
+```{r}
+glm <- lm(Metal~Water, data = All)
+library(car)
+summary(glm)
+
+# Type I test
+anova(glm)  
+
+# Type III test
+Anova(glm,type = "III",icontrasts = c("contr.sum", "contr.poly"))
+```
+
+#### Levene's Test for Homogeneity of Variance
+Use the Levene’s test to check the homogeneity of variances. The function leveneTest() [in car package] will be used.
+```{r}
+library(car)
+#ANOVA of absolute deviation from group means
+leveneTest(Metal~Water, data = All,center = mean)
+```
+The p-value is not less than the significance level of 0.05. This means that there is no evidence to suggest that the variance across groups is statistically significantly different. Therefore, we can assume the homogeneity of variances in the different treatment groups.
+
+#### Paired T test
+```{r}
+# Paired two sample t-test
+dif <- stat.desc(BOT-SUR)
+round(dif,4)
+t.test(BOT-SUR)
+```
+P-value of paired t-test equals 0.014 which is bigger than 0.05. Not reject the null hypothesis.
+
+### EXAMPLE 1 - 3 ONE-WAY ANOVA 
+
+#### Data preparation
+```{r}
+rm(list=ls())
+# Data input
+TEA <- c('A', 'A', 'A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'C', 'C', 'D', 'D', 'D', 'D', 'D', 'D')
+VB <- c(7.9, 6.2, 6.6, 8.6, 8.9, 10.1, 9.6, 5.7, 7.5, 9.8, 6.1, 8.4, 6.4, 7.1, 7.9, 4.5, 5, 4, 6.8, 7.5, 5, 5.3, 6.1, 7.4)
+TEA <- as.factor(TEA)
+All <- data.frame(TEA,VB)
+str(All)
+# statistical description
+library(dplyr)
+All %>%
+  group_by(TEA ) %>%
+  summarise(N = n(),sum = sum(VB), mean = mean(VB),Var = var(VB))
+summarise
+
+```
+#### The GLM procedure and One-way anova
+```{r}
+glm <- lm(VB~TEA, data = All)
+library(car)
+summary(glm)
+
+# Type I test
+anova(glm)  
+
+# Type III test
+Anova(glm,type = "III",icontrasts = c("contr.sum", "contr.poly"))
+```
+
+#### Levene's Test for Homogeneity of Variance
+Use the Levene’s test to check the homogeneity of variances. The function leveneTest() [in car package] will be used.
+```{r}
+#ANOVA of absolute deviation from group means
+leveneTest(VB, group = TEA, data = All,center = mean)
+```
+
+#### LSD test
+```{r}
+#install.packages("agricolae")
+library(agricolae)
+out <- LSD.test(glm,"TEA",p.adj = "none")
+out
+```
+
+### EXAMPLE 1 - 4 Correlation Analysis 
+
+#### Data preparation
+```{r}
+rm(list=ls())
+y <- c(65, 78, 52, 82, 92, 89, 73, 98, 56, 75)
+x <- c(39, 43, 21, 64, 57, 47, 28, 75, 34, 52)
+All <- data.frame(y,x)
+```
+
+#### Data visualization
+```{r}
+# Scatterplot with star points
+plot(All$x,All$y,xlab = "x",ylab="y",pch=8)
+```
+
+#### Correlation Analayis
+```{r}
+# install.packages("Hmisc")
+library(Hmisc)
+
+cor <- rcorr(All$x,All$y, type = "spearman")
+cor
+
+```
+
+
+
+
+
+
+
+
+
+
